@@ -16,18 +16,18 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PPD+ - Projeto Poupança Disponível",
-  description: "Aplicativo móvel para consulta de créditos acumulados do Projeto Poupança Disponível (PPD)",
-  keywords: ["PPD+", "PPD", "Poupança", "Créditos", "Finanças", "Aplicativo Móvel"],
+  description: "Aplicativo móvel para associados do Projeto Poupança Disponível consultarem seus créditos acumulados de forma segura e individualizada.",
+  keywords: ["PPD+", "Poupança Disponível", "Créditos", "Financeiro", "Associados"],
   authors: [{ name: "PPD+ Team" }],
   openGraph: {
     title: "PPD+ - Projeto Poupança Disponível",
-    description: "Consulta segura de créditos acumulados",
+    description: "Consulte seus créditos acumulados de forma segura e individualizada",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "PPD+ - Projeto Poupança Disponível",
-    description: "Consulta segura de créditos acumulados",
+    description: "Consulte seus créditos acumulados de forma segura e individualizada",
   },
 };
 
