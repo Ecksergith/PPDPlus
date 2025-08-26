@@ -1,0 +1,111 @@
+{
+  "associados": [
+    {
+      "id": "meshc4r1pdr5o8nfxxb",
+      "codigoConsumidor": "ADMIN001",
+      "nome": "Administrador",
+      "email": "admin@poupa.com.br",
+      "senha": "$2b$10$rLJgZh/JbyUAX27ZXdW7uuvEWrY4htAUmh6m3jyucJmOcBoHCiqqW",
+      "cpf": "00000000000",
+      "tipoMembro": "MEMBRO",
+      "dataCadastro": "2025-08-26T11:45:35.245Z",
+      "updatedAt": "2025-08-26T11:45:35.245Z",
+      "ativo": true
+    },
+    {
+      "codigoConsumidor": "PPD516209EE",
+      "nome": "Teste Usuario",
+      "email": "teste@email.com",
+      "senha": "$2b$10$0PJK73DDvXYz02q.79REzOW7x66t6mxgca7cU/F9Zlc6iqNUPwgX6",
+      "cpf": "11122233344",
+      "tipoMembro": "MEMBRO",
+      "ativo": true,
+      "id": "meshcws4ulo31b55sqm",
+      "dataCadastro": "2025-08-26T11:46:11.572Z",
+      "updatedAt": "2025-08-26T11:46:11.572Z"
+    },
+    {
+      "codigoConsumidor": "PPD8492726E",
+      "nome": "Usuario Teste",
+      "email": "usuario.teste@example.com",
+      "senha": "$2b$10$U7gvOW/56b.MsxaZMqBKtu6jJbRa0cSqgqeKFwShvKsQOHDntZfIa",
+      "cpf": "12345678900",
+      "tipoMembro": "MEMBRO",
+      "ativo": true,
+      "id": "mesheujuwky70cdk69",
+      "dataCadastro": "2025-08-26T11:47:41.994Z",
+      "updatedAt": "2025-08-26T11:47:41.994Z"
+    },
+    {
+      "codigoConsumidor": "PPD3EA2EF58",
+      "nome": "Usuario PPD+",
+      "email": "usuario.ppdmais@example.com",
+      "senha": "$2b$10$p..jVI76Ui.BppYZbKYnueroXPVD8EQoNK5aALglwe.wswTzw1bJO",
+      "cpf": "98765432100",
+      "tipoMembro": "MEMBRO",
+      "ativo": true,
+      "id": "meshpx4n5woougn47o",
+      "dataCadastro": "2025-08-26T11:56:18.551Z",
+      "updatedAt": "2025-08-26T11:56:18.551Z"
+    },
+    {
+      "codigoConsumidor": "PPDCBEF0887",
+      "nome": "Teste Angola",
+      "email": "teste.angola@example.com",
+      "senha": "$2b$10$HQCTOxmOKuLEYHqfTVHQguSBjxuoVsKPSEKAQCP8WDVQlR8xKc70q",
+      "telefone": "927000000",
+      "cpf": "12345678901",
+      "cep": "123456789",
+      "tipoMembro": "MEMBRO",
+      "ativo": true,
+      "id": "mesi22cjmswypqu9ax",
+      "dataCadastro": "2025-08-26T12:05:45.187Z",
+      "updatedAt": "2025-08-26T12:05:45.187Z"
+    },
+    {
+      "codigoConsumidor": "PPDC014A23E",
+      "nome": "Teste Angola Formato",
+      "email": "teste.formato@example.com",
+      "senha": "$2b$10$eSwkciRG3nAEGOPQWi5NIexl5N0vgoe8NY/OU2qToISxfz38czMXu",
+      "telefone": "+244927000001",
+      "cpf": "98765432109",
+      "cep": "987654321",
+      "tipoMembro": "MEMBRO",
+      "ativo": true,
+      "id": "mesi2jyhd0dqtr2ks68",
+      "dataCadastro": "2025-08-26T12:06:08.009Z",
+      "updatedAt": "2025-08-26T12:06:08.009Z"
+    },
+    {
+      "codigoConsumidor": "PPD8A896881",
+      "nome": "Teste MEC",
+      "email": "teste.mec@example.com",
+      "senha": "$2b$10$cSXE/OIc1QQDQfoGMnquXuMuXBaIcUUV11CJewU22y1eQqUA/DI6a",
+      "telefone": "+244927000002",
+      "cpf": "55555555555",
+      "cep": "008814",
+      "tipoMembro": "MEMBRO",
+      "ativo": true,
+      "id": "mesioioo9ggxqrk54kj",
+      "dataCadastro": "2025-08-26T12:23:12.792Z",
+      "updatedAt": "2025-08-26T12:23:12.792Z"
+    },
+    {
+      "codigoConsumidor": "PPD12C035B1",
+      "nome": "Teste MEC Invalido",
+      "email": "teste.mec.invalido@example.com",
+      "senha": "$2b$10$GozzAhoOwafK7XsyZST1H.ocLQWnmyKrsaEHCzld4tvElrXMGLzuS",
+      "telefone": "+244927000003",
+      "cpf": "66666666666",
+      "cep": "00881",
+      "tipoMembro": "MEMBRO",
+      "ativo": true,
+      "id": "mesiomtr365d9oflwgd",
+      "dataCadastro": "2025-08-26T12:23:18.159Z",
+      "updatedAt": "2025-08-26T12:23:18.159Z"
+    }
+  ],
+  "creditos": [],
+  "transacoes": [],
+  "mapasCredito": []
+}
