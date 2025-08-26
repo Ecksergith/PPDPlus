@@ -29,7 +29,8 @@ import {
   HelpCircle,
   RefreshCw,
   Eye,
-  Download
+  Download,
+  FileText
 } from "lucide-react";
 
 interface Member {

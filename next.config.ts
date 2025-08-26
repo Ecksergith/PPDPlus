@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
     // 构建时忽略ESLint错误
     ignoreDuringBuilds: true,
   },
+  // Ignorar erro do favicon
+  images: {
+    domains: ['localhost'],
+  },
 };
 
 export default nextConfig;
