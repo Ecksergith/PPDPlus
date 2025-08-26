@@ -99,7 +99,7 @@ export default function CadastroPage() {
     }
 
     // Validar formato de MEC (se fornecido)
-    if (formData.cep && !formData.cep.match(/^\d{6}$/)) {
+    if (formData.mec && !formData.mec.match(/^\d{6}$/)) {
       toast({
         title: "Erro de validação",
         description: "MEC deve conter 6 dígitos.",
