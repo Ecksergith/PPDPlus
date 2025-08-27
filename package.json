@@ -6,7 +6,11 @@
     "dev": "nodemon --exec \"npx tsx server.ts\" --watch server.ts --watch src --ext ts,tsx,js,jsx 2>&1 | tee dev.log",
     "build": "next build",
     "start": "NODE_ENV=production tsx server.ts 2>&1 | tee server.log",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "echo 'No database generation needed for binary DB'",
+    "db:migrate": "echo 'No database migration needed for binary DB'",
+    "db:reset": "echo 'No database reset needed for binary DB'",
+    "db:manager": "tsx scripts/db-manager.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -53,9 +57,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.2",
-    "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
-    "jspdf": "^3.0.2",
     "lucide-react": "^0.525.0",
     "next": "15.3.5",
     "next-auth": "^4.24.11",
