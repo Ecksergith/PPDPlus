@@ -22,16 +22,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if user is admin
+    if (!user.isAdmin) {
+      return NextResponse.json(
+        { error: 'Acesso negado. Você não tem permissão de administrador' },
+        { status: 403 }
+      )
+    }
+
     // Create response with user data (excluding password)
     const { senha: _, ...userWithoutPassword } = user
 
     return NextResponse.json({
-      message: 'Login realizado com sucesso',
-      user: userWithoutPassword
+      message: 'Login de administrador realizado com sucesso',
+      user: userWithoutPassword,
+      isAdmin: true
     })
 
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Admin login error:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

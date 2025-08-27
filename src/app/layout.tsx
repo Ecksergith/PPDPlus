@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "next-themes";
+import { AuthProvider } from "@/contexts/auth-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,18 +16,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PPD+ - Projeto Poupança Disponível",
-  description: "Aplicativo móvel para associados do Projeto Poupança Disponível consultarem seus créditos acumulados de forma segura e individualizada.",
-  keywords: ["PPD+", "Poupança Disponível", "Créditos", "Financeiro", "Associados"],
+  description: "Sistema de gestão de crédito e poupança com taxas diferenciadas para membros e não-membros",
+  keywords: ["PPD+", "Poupança", "Crédito", "Angola", "Sistema Financeiro"],
   authors: [{ name: "PPD+ Team" }],
   openGraph: {
     title: "PPD+ - Projeto Poupança Disponível",
-    description: "Consulte seus créditos acumulados de forma segura e individualizada",
+    description: "Sistema de gestão de crédito e poupança com taxas diferenciadas",
+    url: "https://ppdplus.ao",
+    siteName: "PPD+",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "PPD+ - Projeto Poupança Disponível",
-    description: "Consulte seus créditos acumulados de forma segura e individualizada",
+    description: "Sistema de gestão de crédito e poupança",
   },
 };
 
@@ -37,19 +39,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
+        <AuthProvider>
           {children}
           <Toaster />
-        </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

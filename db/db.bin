@@ -1,0 +1,60 @@
+{
+  "users": [
+    {
+      "id": "admin-001",
+      "codigoConsumidor": "ADMIN001",
+      "nome": "Administrador PPD+",
+      "email": "admin@ppdplus.ao",
+      "senha": "YWRtaW4xMjNzYWx0X3BwZCs=",
+      "isMembro": true,
+      "isAdmin": true,
+      "telefone": "+244 900 000 000",
+      "endereco": "Luanda, Angola",
+      "createdAt": "2025-08-27T22:21:51.852Z",
+      "updatedAt": "2025-08-27T22:21:51.852Z"
+    },
+    {
+      "codigoConsumidor": "TEST001",
+      "nome": "Test User",
+      "senha": "dGVzdDEyM3NhbHRfcHBkKw==",
+      "isMembro": false,
+      "isAdmin": false,
+      "id": "user-1756333311869-zb3zlnh2x",
+      "createdAt": "2025-08-27T22:21:51.869Z",
+      "updatedAt": "2025-08-27T22:21:51.869Z"
+    }
+  ],
+  "credits": [],
+  "payments": [],
+  "solicitacoes": [],
+  "adminSettings": [
+    {
+      "id": "settings-001",
+      "chave": "taxa_juros_membros",
+      "valor": "0.15",
+      "descricao": "Taxa de juros para membros (15%)",
+      "updatedAt": "2025-08-27T22:21:51.852Z"
+    },
+    {
+      "id": "settings-002",
+      "chave": "taxa_juros_nao_membros",
+      "valor": "0.25",
+      "descricao": "Taxa de juros para não-membros (25%)",
+      "updatedAt": "2025-08-27T22:21:51.852Z"
+    },
+    {
+      "id": "settings-003",
+      "chave": "limite_credito_membros",
+      "valor": "50000",
+      "descricao": "Limite máximo de crédito para membros",
+      "updatedAt": "2025-08-27T22:21:51.852Z"
+    },
+    {
+      "id": "settings-004",
+      "chave": "limite_credito_nao_membros",
+      "valor": "20000",
+      "descricao": "Limite máximo de crédito para não-membros",
+      "updatedAt": "2025-08-27T22:21:51.852Z"
+    }
+  ]
+}
