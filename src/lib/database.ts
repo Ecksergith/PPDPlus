@@ -274,6 +274,10 @@ class BinaryDatabase {
     return this.data.payments.filter(payment => payment.creditId === creditId)
   }
 
+  async getAllPayments(): Promise<Payment[]> {
+    return this.data.payments
+  }
+
   async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | null> {
     const paymentIndex = this.data.payments.findIndex(payment => payment.id === id)
     if (paymentIndex === -1) return null
@@ -302,6 +306,10 @@ class BinaryDatabase {
 
   async getSolicitacoesByUserId(userId: string): Promise<Solicitacao[]> {
     return this.data.solicitacoes.filter(solicitacao => solicitacao.userId === userId)
+  }
+
+  async getAllSolicitacoes(): Promise<Solicitacao[]> {
+    return this.data.solicitacoes
   }
 
   // Métodos para AdminSettings

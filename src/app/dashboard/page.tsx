@@ -1,534 +1,985 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 import { 
-  PiggyBank, 
-  TrendingUp, 
-  TrendingDown, 
   CreditCard, 
-  DollarSign,
+  DollarSign, 
+  TrendingUp, 
+  Users, 
+  LogOut, 
+  Plus,
   Calendar,
-  ArrowUpRight,
-  ArrowDownRight,
-  Clock,
-  CheckCircle,
-  XCircle,
   AlertCircle,
-  LogOut,
-  User,
-  Settings,
-  Bell,
-  HelpCircle,
-  RefreshCw,
-  Eye,
-  Download,
-  FileText
-} from "lucide-react";
-
-interface Member {
-  id: string;
-  consumerCode: string;
-  name: string;
-  email: string;
-  phone?: string;
-}
+  CheckCircle,
+  Download
+} from "lucide-react"
 
 interface Credit {
-  id: string;
-  amount: number;
-  type: string;
-  description?: string;
-  date: string;
-  isActive: boolean;
+  id: string
+  valor: number
+  juros: number
+  valorTotal: number
+  status: string
+  dataSolicitacao: string
+  dataAprovacao?: string
+  dataVencimento?: string
+  descricao?: string
 }
 
-interface Transaction {
-  id: string;
-  type: string;
-  amount: number;
-  description?: string;
-  status: string;
-  date: string;
-  processedAt?: string;
+interface Payment {
+  id: string
+  valor: number
+  dataPagamento: string
+  status: string
+  metodo?: string
+  descricao?: string
 }
 
-interface AccountData {
-  totalBalance: number;
-  creditsCount: number;
-  recentTransactions: Transaction[];
-}
+export default function Dashboard() {
+  const { user, logout } = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
+  
+  const [credits, setCredits] = useState<Credit[]>([])
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false)
+  const [creditForm, setCreditForm] = useState({
+    valor: '',
+    descricao: ''
+  })
+  const [paymentForm, setPaymentForm] = useState({
+    creditId: '',
+    valor: '',
+    metodo: 'transferencia',
+    descricao: ''
+  })
+  const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({
+    valor: '',
+    metodo: 'mensalidade',
+    descricao: ''
+  })
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [member, setMember] = useState<Member | null>(null);
-  const [accountData, setAccountData] = useState<AccountData | null>(null);
-  const [credits, setCredits] = useState<Credit[]>([]);
+  const calcularJuros = (valor: number) => {
+    if (!user) return 0
+    const taxaJuros = user.isMembro ? 0.15 : 0.25
+    return valor * taxaJuros
+  }
+
+  const handleCreditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/credits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          valor: Number(creditForm.valor),
+          descricao: creditForm.descricao,
+          userId: user?.id
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Solicitação enviada!",
+          description: "Seu pedido de crédito foi enviado para análise",
+        })
+        
+        // Reset form
+        setCreditForm({ valor: '', descricao: '' })
+        
+        // Refresh credits list
+        const newCredit = {
+          id: data.credit.id,
+          valor: data.credit.valor,
+          juros: data.credit.juros,
+          valorTotal: data.credit.valorTotal,
+          status: data.credit.status,
+          dataSolicitacao: data.credit.dataSolicitacao,
+          dataVencimento: data.credit.dataVencimento,
+          descricao: creditForm.descricao
+        }
+        setCredits([newCredit, ...credits])
+      } else {
+        toast({
+          title: "Erro na solicitação",
+          description: data.error || "Não foi possível enviar sua solicitação",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro na solicitação",
+        description: "Ocorreu um erro ao tentar enviar sua solicitação",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmittingPayment(true)
+
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          creditId: paymentForm.creditId,
+          userId: user?.id,
+          valor: Number(paymentForm.valor),
+          metodo: paymentForm.metodo,
+          descricao: paymentForm.descricao
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Pagamento registrado!",
+          description: "Seu pagamento foi registrado e aguarda confirmação",
+        })
+        
+        // Reset form
+        setPaymentForm({
+          creditId: '',
+          valor: '',
+          metodo: 'transferencia',
+          descricao: ''
+        })
+        
+        // Refresh payments list
+        const newPayment = {
+          id: data.payment.id,
+          valor: data.payment.valor,
+          dataPagamento: data.payment.dataPagamento,
+          status: data.payment.status,
+          metodo: data.payment.metodo,
+          descricao: data.payment.descricao
+        }
+        setPayments([newPayment, ...payments])
+      } else {
+        toast({
+          title: "Erro no pagamento",
+          description: data.error || "Não foi possível registrar seu pagamento",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro no pagamento",
+        description: "Ocorreu um erro ao tentar registrar seu pagamento",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingPayment(false)
+    }
+  }
+
+  const handleMonthlyPayment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/payments/monthly', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id,
+          valor: Number(monthlyPaymentForm.valor),
+          metodo: monthlyPaymentForm.metodo,
+          descricao: monthlyPaymentForm.descricao
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Pagamento mensal registrado!",
+          description: `Pagamento de AOA ${Number(monthlyPaymentForm.valor).toLocaleString()} registrado com sucesso`,
+        })
+        
+        // Reset form
+        setMonthlyPaymentForm({ valor: '', metodo: 'mensalidade', descricao: '' })
+        
+        // Refresh payments list
+        const newPayment = {
+          id: data.payment.id,
+          valor: data.payment.valor,
+          dataPagamento: data.payment.dataPagamento,
+          status: data.payment.status,
+          metodo: data.payment.metodo,
+          descricao: data.payment.descricao
+        }
+        setPayments([newPayment, ...payments])
+      } else {
+        toast({
+          title: "Erro no pagamento mensal",
+          description: data.error || "Não foi possível registrar seu pagamento mensal",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro no pagamento mensal",
+        description: "Ocorreu um erro ao tentar registrar seu pagamento mensal",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await fetch('/api/reports/credit-map', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id
+        }),
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.style.display = 'none'
+        a.href = url
+        a.download = `mapa-credito-${user?.codigoConsumidor}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        
+        toast({
+          title: "PDF gerado!",
+          description: "Seu mapa de crédito foi baixado com sucesso",
+        })
+      } else {
+        const data = await response.json()
+        toast({
+          title: "Erro ao gerar PDF",
+          description: data.error || "Não foi possível gerar o PDF",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Ocorreu um erro ao tentar gerar o PDF",
+        variant: "destructive",
+      })
+    }
+  }
 
   useEffect(() => {
-    // Simular carregamento de dados do usuário
-    // Em um sistema real, isso viria de uma API com autenticação
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Simulação de dados - em produção, buscar da API
-      setTimeout(() => {
-        const mockMember: Member = {
-          id: "1",
-          consumerCode: "PPDABC123XYZ",
-          name: "João Silva",
-          email: "joao.silva@email.com",
-          phone: "+244 927 000 000"
-        };
-
-        const mockAccountData: AccountData = {
-          totalBalance: 258050.50,
-          creditsCount: 15,
-          recentTransactions: [
-            {
-              id: "1",
-              type: "CREDIT",
-              amount: 50000.00,
-              description: "Crédito mensal",
-              status: "COMPLETED",
-              date: "2024-01-15T10:30:00Z",
-              processedAt: "2024-01-15T10:30:00Z"
-            },
-            {
-              id: "2",
-              type: "DEBIT",
-              amount: 15000.00,
-              description: "Pagamento de serviço",
-              status: "COMPLETED",
-              date: "2024-01-10T14:20:00Z",
-              processedAt: "2024-01-10T14:20:00Z"
-            },
-            {
-              id: "3",
-              type: "CREDIT",
-              amount: 20000.00,
-              description: "Bônus de indicação",
-              status: "COMPLETED",
-              date: "2024-01-05T09:15:00Z",
-              processedAt: "2024-01-05T09:15:00Z"
-            },
-            {
-              id: "4",
-              type: "PAYMENT",
-              amount: 7550.50,
-              description: "Pagamento pendente",
-              status: "PENDING",
-              date: "2024-01-20T16:45:00Z"
-            }
-          ]
-        };
-
-        const mockCredits: Credit[] = [
-          {
-            id: "1",
-            amount: 50000.00,
-            type: "ACCUMULATED",
-            description: "Crédito mensal - Janeiro",
-            date: "2024-01-15T10:30:00Z",
-            isActive: true
-          },
-          {
-            id: "2",
-            amount: 20000.00,
-            type: "BONUS",
-            description: "Bônus de indicação",
-            date: "2024-01-05T09:15:00Z",
-            isActive: true
-          },
-          {
-            id: "3",
-            amount: 100000.00,
-            type: "ACCUMULATED",
-            description: "Crédito mensal - Dezembro",
-            date: "2023-12-15T10:30:00Z",
-            isActive: true
-          },
-          {
-            id: "4",
-            amount: 88050.50,
-            type: "ACCUMULATED",
-            description: "Crédito mensal - Novembro",
-            date: "2023-11-15T10:30:00Z",
-            isActive: true
-          }
-        ];
-
-        setMember(mockMember);
-        setAccountData(mockAccountData);
-        setCredits(mockCredits);
-        setIsLoading(false);
-      }, 1500);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      toast({
-        title: "Erro ao carregar dados",
-        description: "Não foi possível carregar seus dados. Tente novamente.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
+    if (!user) {
+      router.push("/")
+      return
     }
-  };
+    
+    // Mock data for now - in real app, fetch from API
+    const mockCredits: Credit[] = [
+      {
+        id: "1",
+        valor: 1000,
+        juros: user.isMembro ? 150 : 250,
+        valorTotal: user.isMembro ? 1150 : 1250,
+        status: "aprovado",
+        dataSolicitacao: "2024-01-15",
+        dataAprovacao: "2024-01-16",
+        dataVencimento: "2024-02-15",
+        descricao: "Empréstimo para investimento"
+      },
+      {
+        id: "2",
+        valor: 500,
+        juros: user.isMembro ? 75 : 125,
+        valorTotal: user.isMembro ? 575 : 625,
+        status: "pendente",
+        dataSolicitacao: "2024-01-20",
+        descricao: "Empréstimo pessoal"
+      }
+    ]
+
+    const mockPayments: Payment[] = [
+      {
+        id: "1",
+        valor: 200,
+        dataPagamento: "2024-01-10",
+        status: "confirmado",
+        metodo: "transferencia",
+        descricao: "Pagamento parcial"
+      },
+      {
+        id: "2",
+        valor: 150,
+        dataPagamento: "2024-01-05",
+        status: "confirmado",
+        metodo: "dinheiro",
+        descricao: "Pagamento mensal"
+      }
+    ]
+
+    setCredits(mockCredits)
+    setPayments(mockPayments)
+    setIsLoading(false)
+  }, [user, router])
 
   const handleLogout = () => {
+    logout()
     toast({
-      title: "Sessão encerrada",
-      description: "Você foi desconectado com sucesso.",
-    });
-    router.push('/');
-  };
+      title: "Logout realizado",
+      description: "Você saiu do sistema com sucesso",
+    })
+    router.push("/")
+  }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-AO', {
-      style: 'currency',
-      currency: 'AOA'
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case 'CREDIT':
-        return <ArrowUpRight className="h-4 w-4 text-emerald-400" />;
-      case 'DEBIT':
-        return <ArrowDownRight className="h-4 w-4 text-red-400" />;
-      case 'PAYMENT':
-        return <CreditCard className="h-4 w-4 text-blue-400" />;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "aprovado":
+      case "confirmado":
+        return "bg-green-500"
+      case "pendente":
+        return "bg-yellow-500"
+      case "rejeitado":
+      case "falhou":
+        return "bg-red-500"
+      case "pago":
+        return "bg-blue-500"
       default:
-        return <Clock className="h-4 w-4 text-slate-400" />;
+        return "bg-gray-500"
     }
-  };
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'COMPLETED':
-        return <CheckCircle className="h-4 w-4 text-emerald-400" />;
-      case 'PENDING':
-        return <Clock className="h-4 w-4 text-yellow-400" />;
-      case 'CANCELLED':
-        return <XCircle className="h-4 w-4 text-red-400" />;
-      case 'FAILED':
-        return <AlertCircle className="h-4 w-4 text-red-400" />;
+      case "aprovado":
+      case "confirmado":
+      case "pago":
+        return <CheckCircle className="h-4 w-4" />
+      case "pendente":
+        return <Calendar className="h-4 w-4" />
+      case "rejeitado":
+      case "falhou":
+        return <AlertCircle className="h-4 w-4" />
       default:
-        return <Clock className="h-4 w-4 text-slate-400" />;
+        return null
     }
-  };
+  }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'Concluído';
-      case 'PENDING':
-        return 'Pendente';
-      case 'CANCELLED':
-        return 'Cancelado';
-      case 'FAILED':
-        return 'Falhou';
-      default:
-        return status;
-    }
-  };
-
-  const getCreditTypeText = (type: string) => {
-    switch (type) {
-      case 'ACCUMULATED':
-        return 'Acumulado';
-      case 'BONUS':
-        return 'Bônus';
-      case 'REFUND':
-        return 'Reembolso';
-      case 'ADJUSTMENT':
-        return 'Ajuste';
-      default:
-        return type;
-    }
-  };
+  const totalCredit = credits.reduce((sum, credit) => sum + credit.valor, 0)
+  const totalPaid = payments.reduce((sum, payment) => sum + payment.valor, 0)
+  const pendingCredits = credits.filter(c => c.status === "pendente").length
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-4 text-emerald-400" />
-          <p className="text-lg">Carregando seus dados...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 flex items-center justify-center">
+        <div className="text-white text-xl">Carregando...</div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900">
       {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-emerald-500 rounded-lg">
-                <PiggyBank className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">PPD+</h1>
-                <p className="text-xs text-slate-400">Projeto Poupança Disponível</p>
-              </div>
+      <header className="bg-blue-800/50 backdrop-blur-sm border-b border-blue-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <img src="/ppd-logo.png" alt="PPD+ Logo" className="h-8 w-8" />
+              <h1 className="text-xl font-bold text-white">PPD+ Dashboard</h1>
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="font-semibold">{member?.name}</p>
-                <p className="text-xs text-slate-400">{member?.consumerCode}</p>
+              <div className="text-right">
+                <p className="text-white font-medium">{user?.nome}</p>
+                <p className="text-blue-200 text-sm">
+                  {user?.isMembro ? "Membro" : "Não-membro"} • {user?.codigoConsumidor}
+                </p>
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon">
-                  <Bell className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPDF}
+                className="text-blue-200 border-blue-400 hover:bg-blue-700"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="text-blue-200 border-blue-400 hover:bg-blue-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
-          {/* Welcome Section */}
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-2">Bem-vindo, {member?.name}!</h2>
-            <p className="text-slate-300">Aqui você pode consultar seus créditos e transações</p>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-200">
+                Total Crédito
+              </CardTitle>
+              <CreditCard className="h-4 w-4 text-blue-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                AOA {totalCredit.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Balance Cards */}
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Saldo Total</p>
-                    <p className="text-3xl font-bold text-emerald-400">
-                      {formatCurrency(accountData?.totalBalance || 0)}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-emerald-500/20 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-emerald-400" />
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-sm text-emerald-400">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  <span>+12.5% este mês</span>
-                </div>
-              </CardContent>
-            </Card>
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-200">
+                Total Pago
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-green-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                AOA {totalPaid.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Total de Créditos</p>
-                    <p className="text-3xl font-bold text-blue-400">
-                      {accountData?.creditsCount || 0}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-blue-500/20 rounded-lg">
-                    <CreditCard className="h-6 w-6 text-blue-400" />
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-sm text-blue-400">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  <span>+3 este mês</span>
-                </div>
-              </CardContent>
-            </Card>
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-200">
+                Pendentes
+              </CardTitle>
+              <AlertCircle className="h-4 w-4 text-yellow-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                {pendingCredits}
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Código de Consumidor</p>
-                    <p className="text-xl font-bold text-cyan-400 font-mono">
-                      {member?.consumerCode}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-cyan-500/20 rounded-lg">
-                    <User className="h-6 w-6 text-cyan-400" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                    Associado Ativo
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Detailed Information */}
-          <Tabs defaultValue="credits" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="credits">Meus Créditos</TabsTrigger>
-              <TabsTrigger value="transactions">Transações</TabsTrigger>
-              <TabsTrigger value="extract">Extrato</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="credits" className="space-y-4">
-              <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <CreditCard className="h-5 w-5 mr-2 text-emerald-400" />
-                    Créditos Acumulados
-                  </CardTitle>
-                  <CardDescription>
-                    Todos os seus créditos disponíveis no sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-96">
-                    <div className="space-y-4">
-                      {credits.map((credit) => (
-                        <div key={credit.id} className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-semibold">{getCreditTypeText(credit.type)}</h4>
-                              {credit.isActive && (
-                                <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                                  Ativo
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-slate-400">{credit.description}</p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              {formatDate(credit.date)}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-emerald-400">
-                              {formatCurrency(credit.amount)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="transactions" className="space-y-4">
-              <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Clock className="h-5 w-5 mr-2 text-blue-400" />
-                    Transações Recentes
-                  </CardTitle>
-                  <CardDescription>
-                    Suas últimas transações no sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-96">
-                    <div className="space-y-4">
-                      {accountData?.recentTransactions.map((transaction) => (
-                        <div key={transaction.id} className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            {getTransactionIcon(transaction.type)}
-                            <div>
-                              <h4 className="font-semibold">{transaction.description}</h4>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <div className="flex items-center space-x-1">
-                                  {getStatusIcon(transaction.status)}
-                                  <span className="text-xs text-slate-400">
-                                    {getStatusText(transaction.status)}
-                                  </span>
-                                </div>
-                                <span className="text-xs text-slate-500">
-                                  • {formatDate(transaction.date)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-lg font-bold ${
-                              transaction.type === 'CREDIT' ? 'text-emerald-400' : 
-                              transaction.type === 'DEBIT' ? 'text-red-400' : 'text-blue-400'
-                            }`}>
-                              {transaction.type === 'CREDIT' ? '+' : 
-                               transaction.type === 'DEBIT' ? '-' : ''}
-                              {formatCurrency(transaction.amount)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="extract" className="space-y-4">
-              <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <FileText className="h-5 w-5 mr-2 text-purple-400" />
-                      Extrato Completo
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Baixar PDF
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>
-                    Histórico completo de todas as operações
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Alert className="bg-slate-800 border-slate-600">
-                    <AlertDescription className="text-slate-300">
-                      O extrato completo mostra todas as suas operações de crédito, débito e pagamentos 
-                      realizados no sistema PPD+. Você pode filtrar por período e tipo de operação.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <div className="mt-6 text-center">
-                    <Button variant="outline" className="border-slate-600 text-white hover:bg-slate-700">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Extrato Detalhado
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-200">
+                Taxa de Juros
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-purple-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                {user?.isMembro ? "15%" : "25%"}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="credits" className="space-y-6">
+          <TabsList className="bg-blue-800/50 border-blue-700">
+            <TabsTrigger value="credits" className="text-blue-200 data-[state=active]:bg-blue-700">
+              Meus Créditos
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="text-blue-200 data-[state=active]:bg-blue-700">
+              Pagamentos
+            </TabsTrigger>
+            <TabsTrigger value="monthly-payment" className="text-blue-200 data-[state=active]:bg-blue-700">
+              Pagamento Mensal
+            </TabsTrigger>
+            <TabsTrigger value="new-credit" className="text-blue-200 data-[state=active]:bg-blue-700">
+              Novo Crédito
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="credits" className="space-y-4">
+            <div className="grid gap-4">
+              {credits.map((credit) => (
+                <Card key={credit.id} className="bg-white/10 backdrop-blur-sm border-white/20">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-white">
+                          AOA {credit.valor.toLocaleString()}
+                        </CardTitle>
+                        <CardDescription className="text-blue-200">
+                          {credit.descricao || "Sem descrição"}
+                        </CardDescription>
+                      </div>
+                      <Badge className={`${getStatusColor(credit.status)} text-white`}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(credit.status)}
+                          <span className="capitalize">{credit.status}</span>
+                        </div>
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-blue-200">Juros</p>
+                        <p className="text-white font-medium">AOA {credit.juros.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-blue-200">Total</p>
+                        <p className="text-white font-medium">AOA {credit.valorTotal.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-blue-200">Solicitado</p>
+                        <p className="text-white font-medium">{new Date(credit.dataSolicitacao).toLocaleDateString()}</p>
+                      </div>
+                      {credit.dataVencimento && (
+                        <div>
+                          <p className="text-blue-200">Vencimento</p>
+                          <p className="text-white font-medium">{new Date(credit.dataVencimento).toLocaleDateString()}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="payments" className="space-y-4">
+            <div className="grid gap-4">
+              {payments.map((payment) => (
+                <Card key={payment.id} className="bg-white/10 backdrop-blur-sm border-white/20">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-white">
+                          AOA {payment.valor.toLocaleString()}
+                        </CardTitle>
+                        <CardDescription className="text-blue-200">
+                          {payment.descricao || "Pagamento"}
+                        </CardDescription>
+                      </div>
+                      <Badge className={`${getStatusColor(payment.status)} text-white`}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(payment.status)}
+                          <span className="capitalize">{payment.status}</span>
+                        </div>
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-blue-200">Data</p>
+                        <p className="text-white font-medium">{new Date(payment.dataPagamento).toLocaleDateString()}</p>
+                      </div>
+                      {payment.metodo && (
+                        <div>
+                          <p className="text-blue-200">Método</p>
+                          <p className="text-white font-medium capitalize">{payment.metodo}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {/* Payment Form */}
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white">Novo Pagamento</CardTitle>
+                  <CardDescription className="text-blue-200">
+                    Registre um novo pagamento para seus créditos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handlePaymentSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-white font-medium">Crédito</Label>
+                        <select
+                          value={paymentForm.creditId}
+                          onChange={(e) => setPaymentForm({...paymentForm, creditId: e.target.value})}
+                          className="w-full bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-md p-2"
+                          required
+                        >
+                          <option value="">Selecione um crédito</option>
+                          {credits.filter(c => c.status === 'aprovado').map((credit) => (
+                            <option key={credit.id} value={credit.id}>
+                              Crédito #{credit.id} - AOA {credit.valor.toLocaleString()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="valor" className="text-white font-medium">Valor (AOA)</Label>
+                        <Input
+                          id="valor"
+                          type="number"
+                          placeholder="Valor do pagamento"
+                          value={paymentForm.valor}
+                          onChange={(e) => setPaymentForm({...paymentForm, valor: e.target.value})}
+                          className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                          min="100"
+                          step="50"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-white font-medium">Método de Pagamento</Label>
+                        <select
+                          value={paymentForm.metodo}
+                          onChange={(e) => setPaymentForm({...paymentForm, metodo: e.target.value})}
+                          className="w-full bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-md p-2"
+                          required
+                        >
+                          <option value="transferencia">Transferência Bancária</option>
+                          <option value="dinheiro">Dinheiro</option>
+                          <option value="cheque">Cheque</option>
+                          <option value="outro">Outro</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="descricao" className="text-white font-medium">Descrição</Label>
+                        <Input
+                          id="descricao"
+                          type="text"
+                          placeholder="Descrição do pagamento"
+                          value={paymentForm.descricao}
+                          onChange={(e) => setPaymentForm({...paymentForm, descricao: e.target.value})}
+                          className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        disabled={isSubmittingPayment || !paymentForm.creditId || !paymentForm.valor}
+                        className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                      >
+                        {isSubmittingPayment ? "Registrando..." : "Registrar Pagamento"}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="monthly-payment" className="space-y-4">
+            <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+              <CardHeader>
+                <CardTitle className="text-white">Pagamento Mensal</CardTitle>
+                <CardDescription className="text-blue-200">
+                  {user?.isMembro 
+                    ? "Realize o pagamento da sua mensalidade como membro" 
+                    : "Apenas membros podem realizar pagamentos mensais. Entre em contato para se tornar um membro."
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {user?.isMembro ? (
+                  <div className="space-y-6">
+                    {/* Payment Summary */}
+                    <Card className="bg-blue-800/30 border-blue-600">
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-blue-200">Total Devido</p>
+                            <p className="text-white font-medium">
+                              AOA {credits.reduce((sum, credit) => {
+                                if (credit.status === 'aprovado') {
+                                  return sum + credit.valorTotal
+                                }
+                                return sum
+                              }, 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-blue-200">Total Pago</p>
+                            <p className="text-white font-medium">
+                              AOA {payments.reduce((sum, payment) => sum + payment.valor, 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-blue-200">Saldo Devedor</p>
+                            <p className="text-white font-medium">
+                              AOA {credits.reduce((sum, credit) => {
+                                if (credit.status === 'aprovado') {
+                                  return sum + credit.valorTotal
+                                }
+                                return sum
+                              }, 0) - payments.reduce((sum, payment) => sum + payment.valor, 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-blue-200">Próximo Vencimento</p>
+                            <p className="text-white font-medium">
+                              {credits
+                                .filter(c => c.status === 'aprovado' && new Date(c.dataVencimento!) > new Date())
+                                .sort((a, b) => new Date(a.dataVencimento!).getTime() - new Date(b.dataVencimento!).getTime())[0]
+                                ? new Date(credits
+                                    .filter(c => c.status === 'aprovado' && new Date(c.dataVencimento!) > new Date())
+                                    .sort((a, b) => new Date(a.dataVencimento!).getTime() - new Date(b.dataVencimento!).getTime())[0].dataVencimento!)
+                                    .toLocaleDateString('pt-AO')
+                                : 'N/A'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Payment Form */}
+                    <form onSubmit={handleMonthlyPayment} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="paymentValor" className="text-white font-medium">
+                          Valor do Pagamento (AOA)
+                        </Label>
+                        <Input
+                          id="paymentValor"
+                          type="number"
+                          placeholder="Digite o valor do pagamento"
+                          value={monthlyPaymentForm.valor}
+                          onChange={(e) => setMonthlyPaymentForm({...monthlyPaymentForm, valor: e.target.value})}
+                          className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                          min="100"
+                          step="50"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paymentMetodo" className="text-white font-medium">
+                          Método de Pagamento
+                        </Label>
+                        <select
+                          id="paymentMetodo"
+                          value={monthlyPaymentForm.metodo}
+                          onChange={(e) => setMonthlyPaymentForm({...monthlyPaymentForm, metodo: e.target.value})}
+                          className="w-full bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-md p-3"
+                        >
+                          <option value="mensalidade" className="bg-blue-900">Mensalidade</option>
+                          <option value="transferencia" className="bg-blue-900">Transferência</option>
+                          <option value="dinheiro" className="bg-blue-900">Dinheiro</option>
+                          <option value="cheque" className="bg-blue-900">Cheque</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paymentDescricao" className="text-white font-medium">
+                          Descrição
+                        </Label>
+                        <Input
+                          id="paymentDescricao"
+                          placeholder="Descrição do pagamento (opcional)"
+                          value={monthlyPaymentForm.descricao}
+                          onChange={(e) => setMonthlyPaymentForm({...monthlyPaymentForm, descricao: e.target.value})}
+                          className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                        />
+                      </div>
+
+                      <div className="flex justify-end space-x-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="text-blue-200 border-blue-400"
+                          onClick={() => setMonthlyPaymentForm({ valor: '', metodo: 'mensalidade', descricao: '' })}
+                        >
+                          Limpar
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting || !monthlyPaymentForm.valor}
+                          className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                        >
+                          {isSubmitting ? "Processando..." : "Pagar Mensalidade"}
+                        </Button>
+                      </div>
+                    </form>
+
+                    {/* Payment History */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium text-white">Histórico de Pagamentos Mensais</h3>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {payments.filter(p => p.metodo === 'mensalidade').length > 0 ? (
+                          payments
+                            .filter(p => p.metodo === 'mensalidade')
+                            .sort((a, b) => new Date(b.dataPagamento).getTime() - new Date(a.dataPagamento).getTime())
+                            .map((payment) => (
+                              <div key={payment.id} className="bg-blue-800/30 border-blue-600 rounded-lg p-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-white font-medium">AOA {payment.valor.toLocaleString()}</p>
+                                    <p className="text-blue-200 text-sm">{new Date(payment.dataPagamento).toLocaleDateString('pt-AO')}</p>
+                                  </div>
+                                  <Badge className={payment.status === 'confirmado' ? 'bg-green-500' : 'bg-yellow-500'}>
+                                    {payment.status === 'confirmado' ? 'Confirmado' : 'Pendente'}
+                                  </Badge>
+                                </div>
+                                {payment.descricao && (
+                                  <p className="text-blue-200 text-sm mt-1">{payment.descricao}</p>
+                                )}
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <Calendar className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+                            <p className="text-blue-200">Nenhum pagamento mensal registrado</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-6 max-w-md mx-auto">
+                      <AlertCircle className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-white mb-2">
+                        Acesso Restrito
+                      </h3>
+                      <p className="text-blue-200 mb-4">
+                        Apenas membros do PPD+ podem realizar pagamentos mensais com benefícios exclusivos.
+                      </p>
+                      <Button className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                        Solicitar Status de Membro
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="new-credit" className="space-y-4">
+            <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+              <CardHeader>
+                <CardTitle className="text-white">Solicitar Novo Crédito</CardTitle>
+                <CardDescription className="text-blue-200">
+                  Preencha o formulário para solicitar um novo crédito
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <form onSubmit={handleCreditSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="valor" className="text-white font-medium">
+                      Valor do Crédito (AOA)
+                    </Label>
+                    <Input
+                      id="valor"
+                      type="number"
+                      placeholder="Digite o valor desejado"
+                      value={creditForm.valor}
+                      onChange={(e) => setCreditForm({...creditForm, valor: e.target.value})}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                      min="1000"
+                      step="100"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="descricao" className="text-white font-medium">
+                      Descrição
+                    </Label>
+                    <textarea
+                      id="descricao"
+                      placeholder="Descreva o propósito do crédito"
+                      value={creditForm.descricao}
+                      onChange={(e) => setCreditForm({...creditForm, descricao: e.target.value})}
+                      className="w-full bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-md p-3 min-h-[100px] resize-none"
+                    />
+                  </div>
+
+                  {/* Interest Rate Preview */}
+                  {creditForm.valor && (
+                    <Card className="bg-blue-800/30 border-blue-600">
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-blue-200">Valor Solicitado</p>
+                            <p className="text-white font-medium">AOA {Number(creditForm.valor).toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-blue-200">Taxa de Juros</p>
+                            <p className="text-white font-medium">{user?.isMembro ? '15%' : '25%'}</p>
+                          </div>
+                          <div>
+                            <p className="text-blue-200">Valor dos Juros</p>
+                            <p className="text-white font-medium">
+                              AOA {calcularJuros(Number(creditForm.valor)).toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-blue-200">Total a Pagar</p>
+                            <p className="text-white font-medium">
+                              AOA {(Number(creditForm.valor) + calcularJuros(Number(creditForm.valor))).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="flex justify-end space-x-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-blue-200 border-blue-400"
+                      onClick={() => setCreditForm({valor: '', descricao: ''})}
+                    >
+                      Limpar
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || !creditForm.valor}
+                      className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                    >
+                      {isSubmitting ? "Enviando..." : "Solicitar Crédito"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
-  );
+  )
 }

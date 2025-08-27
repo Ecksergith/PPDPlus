@@ -1,128 +1,120 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { PiggyBank, User, Lock, Eye, EyeOff } from "lucide-react";
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Eye, EyeOff } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Home() {
-  const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [consumerCode, setConsumerCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const [codigoConsumidor, setCodigoConsumidor] = useState("")
+  const [senha, setSenha] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  
+  const { login } = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          consumerCode: consumerCode,
-          password: password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      const success = await login(codigoConsumidor, senha)
+      
+      if (success) {
         toast({
           title: "Login realizado com sucesso!",
-          description: `Bem-vindo, ${data.member.name}!`,
-        });
-        
-        // Armazenar dados do usuário no localStorage (em produção, usar cookies seguros)
-        localStorage.setItem('ppd_user', JSON.stringify(data));
-        
-        // Redirecionar para o dashboard
-        router.push('/dashboard');
+          description: "Bem-vindo ao PPD+",
+        })
+        router.push("/dashboard")
       } else {
         toast({
-          title: "Erro de autenticação",
-          description: data.error || "Código de consumidor ou senha inválidos",
+          title: "Erro no login",
+          description: "Código de consumidor ou senha inválidos",
           variant: "destructive",
-        });
+        })
       }
     } catch (error) {
-      console.error('Erro no login:', error);
       toast({
-        title: "Erro de conexão",
-        description: "Não foi possível conectar ao servidor. Tente novamente.",
+        title: "Erro no login",
+        description: "Ocorreu um erro ao tentar fazer login",
         variant: "destructive",
-      });
+      })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
-
-  const handleRegister = () => {
-    router.push('/register');
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="p-4 bg-emerald-500 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-            <PiggyBank className="h-10 w-10 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo and Brand */}
+        <div className="text-center space-y-4">
+          <div className="w-24 h-24 mx-auto relative">
+            <img
+              src="/ppd-logo.png"
+              alt="PPD+ Logo"
+              className="w-full h-full object-contain drop-shadow-lg"
+            />
           </div>
-          <h1 className="text-3xl font-bold mb-2">PPD+</h1>
-          <p className="text-slate-400">Projeto Poupança Disponível</p>
+          <div>
+            <h1 className="text-3xl font-bold text-white">PPD+</h1>
+            <p className="text-blue-200 text-sm">Projeto Poupança Disponível</p>
+          </div>
         </div>
 
-        {/* Login Form */}
-        <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Acessar Conta</CardTitle>
-            <CardDescription className="text-slate-400">
-              Entre com seu código de consumidor e senha
+        {/* Login Card */}
+        <Card className="bg-white/10 backdrop-blur-sm border-white/20 shadow-2xl">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-white text-center">
+              Acessar Conta
+            </CardTitle>
+            <CardDescription className="text-blue-200 text-center">
+              Entre com suas credenciais para acessar o sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="consumerCode">Código de Consumidor</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="consumerCode"
-                    type="text"
-                    placeholder="Digite seu código"
-                    value={consumerCode}
-                    onChange={(e) => setConsumerCode(e.target.value)}
-                    className="pl-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-                  />
-                </div>
+                <Label htmlFor="codigo" className="text-white font-medium">
+                  Código de Consumidor
+                </Label>
+                <Input
+                  id="codigo"
+                  type="text"
+                  placeholder="Digite seu código de consumidor"
+                  value={codigoConsumidor}
+                  onChange={(e) => setCodigoConsumidor(e.target.value)}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                  required
+                />
               </div>
-
+              
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="senha" className="text-white font-medium">
+                  Senha
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
-                    id="password"
+                    id="senha"
                     type={showPassword ? "text" : "password"}
                     placeholder="Digite sua senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400 pr-10"
+                    required
                   />
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2 text-slate-400 hover:text-white"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 text-blue-200 hover:text-white hover:bg-white/10"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -134,34 +126,32 @@ export default function Home() {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+              <Button
+                type="submit"
                 disabled={isLoading}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 shadow-lg disabled:opacity-50"
               >
-                {isLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Acessando...</span>
-                  </div>
-                ) : (
-                  "Acessar"
-                )}
+                {isLoading ? "Entrando..." : "Acessar"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <Button 
-                onClick={handleRegister}
-                variant="ghost" 
-                className="text-slate-400 hover:text-white"
-              >
-                Não tem uma conta? Cadastre-se
-              </Button>
+            <div className="mt-6 text-center space-y-2">
+              <p className="text-blue-200 text-sm">
+                Não tem uma conta?{" "}
+                <a href="/register" className="text-green-400 hover:text-green-300 font-medium transition-colors">
+                  Cadastre-se
+                </a>
+              </p>
+              <p className="text-blue-200 text-sm">
+                É administrador?{" "}
+                <a href="/admin-login" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
+                  Acesso administrativo
+                </a>
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
+  )
 }
