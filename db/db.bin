@@ -22,26 +22,6 @@
       "id": "user-1756333311869-zb3zlnh2x",
       "createdAt": "2025-08-27T22:21:51.869Z",
       "updatedAt": "2025-08-27T22:21:51.869Z"
-    },
-    {
-      "codigoConsumidor": "TEST002",
-      "nome": "Test User 2",
-      "senha": "dGVzdDEyM3NhbHRfcHBkKw==",
-      "isMembro": false,
-      "isAdmin": false,
-      "id": "user-1756335913048-w06ht1hap",
-      "createdAt": "2025-08-27T23:05:13.048Z",
-      "updatedAt": "2025-08-27T23:05:13.048Z"
-    },
-    {
-      "codigoConsumidor": "TEST003",
-      "nome": "Test User 3",
-      "senha": "dGVzdDEyM3NhbHRfcHBkKw==",
-      "isMembro": false,
-      "isAdmin": false,
-      "id": "user-1756335915500-2wmeqhccd",
-      "createdAt": "2025-08-27T23:05:15.500Z",
-      "updatedAt": "2025-08-27T23:05:15.500Z"
     }
   ],
   "credits": [],

@@ -64,11 +64,6 @@ export default function Dashboard() {
     metodo: 'transferencia',
     descricao: ''
   })
-  const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({
-    valor: '',
-    metodo: 'mensalidade',
-    descricao: ''
-  })
 
   const calcularJuros = (valor: number) => {
     if (!user) return 0
@@ -194,63 +189,6 @@ export default function Dashboard() {
       })
     } finally {
       setIsSubmittingPayment(false)
-    }
-  }
-
-  const handleMonthlyPayment = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const response = await fetch('/api/payments/monthly', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user?.id,
-          valor: Number(monthlyPaymentForm.valor),
-          metodo: monthlyPaymentForm.metodo,
-          descricao: monthlyPaymentForm.descricao
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        toast({
-          title: "Pagamento mensal registrado!",
-          description: `Pagamento de AOA ${Number(monthlyPaymentForm.valor).toLocaleString()} registrado com sucesso`,
-        })
-        
-        // Reset form
-        setMonthlyPaymentForm({ valor: '', metodo: 'mensalidade', descricao: '' })
-        
-        // Refresh payments list
-        const newPayment = {
-          id: data.payment.id,
-          valor: data.payment.valor,
-          dataPagamento: data.payment.dataPagamento,
-          status: data.payment.status,
-          metodo: data.payment.metodo,
-          descricao: data.payment.descricao
-        }
-        setPayments([newPayment, ...payments])
-      } else {
-        toast({
-          title: "Erro no pagamento mensal",
-          description: data.error || "Não foi possível registrar seu pagamento mensal",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Erro no pagamento mensal",
-        description: "Ocorreu um erro ao tentar registrar seu pagamento mensal",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -518,9 +456,6 @@ export default function Dashboard() {
             <TabsTrigger value="payments" className="text-blue-200 data-[state=active]:bg-blue-700">
               Pagamentos
             </TabsTrigger>
-            <TabsTrigger value="monthly-payment" className="text-blue-200 data-[state=active]:bg-blue-700">
-              Pagamento Mensal
-            </TabsTrigger>
             <TabsTrigger value="new-credit" className="text-blue-200 data-[state=active]:bg-blue-700">
               Novo Crédito
             </TabsTrigger>
@@ -700,191 +635,6 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="monthly-payment" className="space-y-4">
-            <Card className="bg-white/10 backdrop-blur-sm border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">Pagamento Mensal</CardTitle>
-                <CardDescription className="text-blue-200">
-                  {user?.isMembro 
-                    ? "Realize o pagamento da sua mensalidade como membro" 
-                    : "Apenas membros podem realizar pagamentos mensais. Entre em contato para se tornar um membro."
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {user?.isMembro ? (
-                  <div className="space-y-6">
-                    {/* Payment Summary */}
-                    <Card className="bg-blue-800/30 border-blue-600">
-                      <CardContent className="pt-6">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-blue-200">Total Devido</p>
-                            <p className="text-white font-medium">
-                              AOA {credits.reduce((sum, credit) => {
-                                if (credit.status === 'aprovado') {
-                                  return sum + credit.valorTotal
-                                }
-                                return sum
-                              }, 0).toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-blue-200">Total Pago</p>
-                            <p className="text-white font-medium">
-                              AOA {payments.reduce((sum, payment) => sum + payment.valor, 0).toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-blue-200">Saldo Devedor</p>
-                            <p className="text-white font-medium">
-                              AOA {credits.reduce((sum, credit) => {
-                                if (credit.status === 'aprovado') {
-                                  return sum + credit.valorTotal
-                                }
-                                return sum
-                              }, 0) - payments.reduce((sum, payment) => sum + payment.valor, 0).toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-blue-200">Próximo Vencimento</p>
-                            <p className="text-white font-medium">
-                              {credits
-                                .filter(c => c.status === 'aprovado' && new Date(c.dataVencimento!) > new Date())
-                                .sort((a, b) => new Date(a.dataVencimento!).getTime() - new Date(b.dataVencimento!).getTime())[0]
-                                ? new Date(credits
-                                    .filter(c => c.status === 'aprovado' && new Date(c.dataVencimento!) > new Date())
-                                    .sort((a, b) => new Date(a.dataVencimento!).getTime() - new Date(b.dataVencimento!).getTime())[0].dataVencimento!)
-                                    .toLocaleDateString('pt-AO')
-                                : 'N/A'
-                              }
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Payment Form */}
-                    <form onSubmit={handleMonthlyPayment} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="paymentValor" className="text-white font-medium">
-                          Valor do Pagamento (AOA)
-                        </Label>
-                        <Input
-                          id="paymentValor"
-                          type="number"
-                          placeholder="Digite o valor do pagamento"
-                          value={monthlyPaymentForm.valor}
-                          onChange={(e) => setMonthlyPaymentForm({...monthlyPaymentForm, valor: e.target.value})}
-                          className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
-                          min="100"
-                          step="50"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="paymentMetodo" className="text-white font-medium">
-                          Método de Pagamento
-                        </Label>
-                        <select
-                          id="paymentMetodo"
-                          value={monthlyPaymentForm.metodo}
-                          onChange={(e) => setMonthlyPaymentForm({...monthlyPaymentForm, metodo: e.target.value})}
-                          className="w-full bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-md p-3"
-                        >
-                          <option value="mensalidade" className="bg-blue-900">Mensalidade</option>
-                          <option value="transferencia" className="bg-blue-900">Transferência</option>
-                          <option value="dinheiro" className="bg-blue-900">Dinheiro</option>
-                          <option value="cheque" className="bg-blue-900">Cheque</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="paymentDescricao" className="text-white font-medium">
-                          Descrição
-                        </Label>
-                        <Input
-                          id="paymentDescricao"
-                          placeholder="Descrição do pagamento (opcional)"
-                          value={monthlyPaymentForm.descricao}
-                          onChange={(e) => setMonthlyPaymentForm({...monthlyPaymentForm, descricao: e.target.value})}
-                          className="bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400"
-                        />
-                      </div>
-
-                      <div className="flex justify-end space-x-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="text-blue-200 border-blue-400"
-                          onClick={() => setMonthlyPaymentForm({ valor: '', metodo: 'mensalidade', descricao: '' })}
-                        >
-                          Limpar
-                        </Button>
-                        <Button
-                          type="submit"
-                          disabled={isSubmitting || !monthlyPaymentForm.valor}
-                          className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
-                        >
-                          {isSubmitting ? "Processando..." : "Pagar Mensalidade"}
-                        </Button>
-                      </div>
-                    </form>
-
-                    {/* Payment History */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium text-white">Histórico de Pagamentos Mensais</h3>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {payments.filter(p => p.metodo === 'mensalidade').length > 0 ? (
-                          payments
-                            .filter(p => p.metodo === 'mensalidade')
-                            .sort((a, b) => new Date(b.dataPagamento).getTime() - new Date(a.dataPagamento).getTime())
-                            .map((payment) => (
-                              <div key={payment.id} className="bg-blue-800/30 border-blue-600 rounded-lg p-3">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="text-white font-medium">AOA {payment.valor.toLocaleString()}</p>
-                                    <p className="text-blue-200 text-sm">{new Date(payment.dataPagamento).toLocaleDateString('pt-AO')}</p>
-                                  </div>
-                                  <Badge className={payment.status === 'confirmado' ? 'bg-green-500' : 'bg-yellow-500'}>
-                                    {payment.status === 'confirmado' ? 'Confirmado' : 'Pendente'}
-                                  </Badge>
-                                </div>
-                                {payment.descricao && (
-                                  <p className="text-blue-200 text-sm mt-1">{payment.descricao}</p>
-                                )}
-                              </div>
-                            ))
-                        ) : (
-                          <div className="text-center py-8">
-                            <Calendar className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-                            <p className="text-blue-200">Nenhum pagamento mensal registrado</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-6 max-w-md mx-auto">
-                      <AlertCircle className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-2">
-                        Acesso Restrito
-                      </h3>
-                      <p className="text-blue-200 mb-4">
-                        Apenas membros do PPD+ podem realizar pagamentos mensais com benefícios exclusivos.
-                      </p>
-                      <Button className="bg-yellow-600 hover:bg-yellow-700 text-white">
-                        Solicitar Status de Membro
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="new-credit" className="space-y-4">
