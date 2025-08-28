@@ -15,11 +15,8 @@ export async function POST(request: NextRequest) {
 
     // If adminId is provided, verify it's an admin
     if (adminId) {
-      const admin = await db.user.findUnique({
-        where: { id: adminId, isAdmin: true }
-      })
-
-      if (!admin) {
+      const admin = await db.findUserById(adminId)
+      if (!admin || !admin.isAdmin) {
         return NextResponse.json(
           { error: 'Administrador não encontrado ou sem permissão' },
           { status: 403 }
@@ -28,9 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user data
-    const user = await db.user.findUnique({
-      where: { id: userId }
-    })
+    const user = await db.findUserById(userId)
 
     if (!user) {
       return NextResponse.json(
@@ -40,24 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's credits
-    const credits = await db.credit.findMany({
-      where: { userId },
-      orderBy: { dataSolicitacao: 'desc' }
-    })
+    const credits = await db.getCreditsByUserId(userId)
 
     // Get user's payments
-    const payments = await db.payment.findMany({
-      where: { userId },
-      include: {
-        credit: {
-          select: {
-            id: true,
-            valor: true
-          }
-        }
-      },
-      orderBy: { dataPagamento: 'desc' }
-    })
+    const payments = await db.getPaymentsByUserId(userId)
 
     // Calculate totals
     const totalCredit = credits.reduce((sum, credit) => sum + credit.valor, 0)

@@ -14,50 +14,42 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify admin
-    const admin = await db.user.findUnique({
-      where: { id: adminId, isAdmin: true }
-    })
-
-    if (!admin) {
+    const admin = await db.findUserById(adminId)
+    if (!admin || !admin.isAdmin) {
       return NextResponse.json(
         { error: 'Administrador não encontrado ou sem permissão' },
         { status: 403 }
       )
     }
 
-    const users = await db.user.findMany({
-      select: {
-        id: true,
-        codigoConsumidor: true,
-        nome: true,
-        email: true,
-        isMembro: true,
-        isAdmin: true,
-        telefone: true,
-        createdAt: true,
-        updatedAt: true,
-        credits: {
-          select: {
-            id: true,
-            valor: true,
-            status: true,
-            dataSolicitacao: true
-          }
-        },
-        payments: {
-          select: {
-            id: true,
-            valor: true,
-            status: true,
-            dataPagamento: true
-          }
+    const users = await db.getAllUsers()
+
+    // Add credits and payments info for each user
+    const usersWithDetails = await Promise.all(
+      users.map(async (user) => {
+        const credits = await db.getCreditsByUserId(user.id)
+        const payments = await db.getPaymentsByUserId(user.id)
+        
+        return {
+          ...user,
+          credits: credits.map(c => ({
+            id: c.id,
+            valor: c.valor,
+            status: c.status,
+            dataSolicitacao: c.dataSolicitacao
+          })),
+          payments: payments.map(p => ({
+            id: p.id,
+            valor: p.valor,
+            status: p.status,
+            dataPagamento: p.dataPagamento
+          }))
         }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
+      })
+    )
 
     return NextResponse.json({
-      users
+      users: usersWithDetails
     })
 
   } catch (error) {
@@ -81,11 +73,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify admin
-    const admin = await db.user.findUnique({
-      where: { id: adminId, isAdmin: true }
-    })
-
-    if (!admin) {
+    const admin = await db.findUserById(adminId)
+    if (!admin || !admin.isAdmin) {
       return NextResponse.json(
         { error: 'Administrador não encontrado ou sem permissão' },
         { status: 403 }
@@ -93,10 +82,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get user to update
-    const user = await db.user.findUnique({
-      where: { id: userId }
-    })
-
+    const user = await db.findUserById(userId)
     if (!user) {
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
@@ -105,40 +91,41 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update user
-    const updatedUser = await db.user.update({
-      where: { id: userId },
-      data: {
-        isMembro: isMembro !== undefined ? isMembro : user.isMembro,
-        isAdmin: isAdmin !== undefined ? isAdmin : user.isAdmin
-      },
-      select: {
-        id: true,
-        codigoConsumidor: true,
-        nome: true,
-        email: true,
-        isMembro: true,
-        isAdmin: true,
-        telefone: true,
-        createdAt: true,
-        updatedAt: true
-      }
+    const updatedUser = await db.updateUser(userId, {
+      isMembro: isMembro !== undefined ? isMembro : user.isMembro,
+      isAdmin: isAdmin !== undefined ? isAdmin : user.isAdmin
     })
 
+    if (!updatedUser) {
+      return NextResponse.json(
+        { error: 'Não foi possível atualizar o usuário' },
+        { status: 500 }
+      )
+    }
+
     // Create notification
-    await db.solicitacao.create({
-      data: {
-        userId,
-        tipo: 'status_atualizado',
-        descricao: 'Status do usuário atualizado pelo administrador',
-        status: 'aprovado',
-        dataResposta: new Date(),
-        resposta: `Seu status foi atualizado: ${isMembro ? 'Membro' : 'Não-membro'}${isAdmin ? ', Administrador' : ''}`
-      }
+    await db.createSolicitacao({
+      userId,
+      tipo: 'status_atualizado',
+      descricao: 'Status do usuário atualizado pelo administrador',
+      status: 'aprovado',
+      dataResposta: new Date().toISOString(),
+      resposta: `Seu status foi atualizado: ${isMembro ? 'Membro' : 'Não-membro'}${isAdmin ? ', Administrador' : ''}`
     })
 
     return NextResponse.json({
       message: 'Usuário atualizado com sucesso',
-      user: updatedUser
+      user: {
+        id: updatedUser.id,
+        codigoConsumidor: updatedUser.codigoConsumidor,
+        nome: updatedUser.nome,
+        email: updatedUser.email,
+        isMembro: updatedUser.isMembro,
+        isAdmin: updatedUser.isAdmin,
+        telefone: updatedUser.telefone,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      }
     })
 
   } catch (error) {
