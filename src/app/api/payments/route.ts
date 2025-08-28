@@ -13,11 +13,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get credit to verify it exists and belongs to user
-    const credit = await db.credit.findUnique({
-      where: { id: creditId, userId }
-    })
+    const credit = await db.getCreditById(creditId)
 
-    if (!credit) {
+    if (!credit || credit.userId !== userId) {
       return NextResponse.json(
         { error: 'Crédito não encontrado ou não pertence ao usuário' },
         { status: 404 }
@@ -32,33 +30,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Create payment
-    const payment = await db.payment.create({
-      data: {
-        creditId,
-        userId,
-        valor,
-        metodo: metodo || 'transferencia',
-        descricao: descricao || 'Pagamento de crédito',
-        status: 'pendente'
-      }
+    const payment = await db.createPayment({
+      creditId,
+      userId,
+      valor,
+      metodo: metodo || 'transferencia',
+      descricao: descricao || 'Pagamento de crédito',
+      status: 'pendente'
     })
 
     // Update credit status if fully paid
-    const totalPaid = await db.payment.aggregate({
-      where: { 
-        creditId, 
-        status: 'confirmado' 
-      },
-      _sum: { valor: true }
-    })
-
-    const newTotalPaid = (totalPaid._sum.valor || 0) + valor
+    const payments = await db.getPaymentsByCreditId(creditId)
+    const totalPaid = payments
+      .filter(p => p.status === 'confirmado')
+      .reduce((sum, p) => sum + p.valor, 0) + valor
     
-    if (newTotalPaid >= credit.valorTotal) {
-      await db.credit.update({
-        where: { id: creditId },
-        data: { status: 'pago' }
-      })
+    if (totalPaid >= credit.valorTotal) {
+      await db.updateCredit(creditId, { status: 'pago' })
     }
 
     return NextResponse.json({
@@ -94,19 +82,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const payments = await db.payment.findMany({
-      where: { userId },
-      include: {
-        credit: {
-          select: {
-            id: true,
-            valor: true,
-            status: true
-          }
-        }
-      },
-      orderBy: { dataPagamento: 'desc' }
-    })
+    const payments = await db.getPaymentsByUserId(userId)
 
     return NextResponse.json({
       payments
